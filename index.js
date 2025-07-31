@@ -7,18 +7,17 @@ const pdfParse = require('pdf-parse');
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
-
 app.use(cors());
 app.use(express.json());
 
-let parsedPdfText = ''; // Store uploaded PDF content
+let parsedPdfText = '';
 
 app.post('/upload', upload.single('pdf'), async (req, res) => {
   const file = req.file;
   const dataBuffer = fs.readFileSync(file.path);
   const pdfData = await pdfParse(dataBuffer);
 
-  parsedPdfText = pdfData.text; // Save PDF content globally
+  parsedPdfText = pdfData.text;
   res.json({ numPages: pdfData.numpages || 1 });
 });
 
@@ -26,25 +25,31 @@ app.post('/chat', async (req, res) => {
   const question = req.body.question;
 
   try {
-    const ollamaRes = await fetch('http://localhost:11434/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'tinyllama',
-        prompt: `Question: ${question}\n\nDocument:\n${parsedPdfText}`,
-        stream: false
-      })
-    });
+    const geminiRes = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBslQQmZarJfFZPnWYfms6-MstRzPqECBU',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: `Question: ${question}\n\nContext:\n${parsedPdfText.slice(0, 2000)}` }
+              ]
+            }
+          ]
+        })
+      }
+    );
 
-    const result = await ollamaRes.json();
+    const result = await geminiRes.json();
+    const answer = result?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, no answer generated.';
 
-    res.json({
-      answer: result.response || 'Sorry, I could not generate a response.',
-      pages: [1] // You can implement actual page detection later
-    });
-  } catch (err) {
-    console.error('Ollama error:', err);
-    res.status(500).json({ answer: 'Failed to connect to AI.' });
+    res.json({ answer, pages: [1] });
+
+  } catch (error) {
+    console.error('Gemini API Error:', error);
+    res.status(500).json({ answer: 'Failed to connect to Gemini AI.' });
   }
 });
 
