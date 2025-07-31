@@ -7,6 +7,11 @@ const pdfParse = require('pdf-parse');
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
+
+require('dotenv').config();
+
+const API_KEY = process.env.GEMINI_API_KEY;
+
 app.use(cors());
 app.use(express.json());
 
@@ -26,7 +31,7 @@ app.post('/chat', async (req, res) => {
 
   try {
     const geminiRes = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBslQQmZarJfFZPnWYfms6-MstRzPqECBU',
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
