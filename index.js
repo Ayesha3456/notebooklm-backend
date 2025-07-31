@@ -31,7 +31,7 @@ app.post('/chat', async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'tinyllama',
-        prompt: question,
+        prompt: `Question: ${question}\n\nDocument:\n${parsedPdfText}`,
         stream: false
       })
     });
@@ -40,7 +40,7 @@ app.post('/chat', async (req, res) => {
 
     res.json({
       answer: result.response || 'Sorry, I could not generate a response.',
-      pages: [1] // Static mock reference (you can improve this later)
+      pages: [1] // You can implement actual page detection later
     });
   } catch (err) {
     console.error('Ollama error:', err);
