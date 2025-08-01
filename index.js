@@ -10,30 +10,31 @@ const app = express();
 const upload = multer({ dest: 'uploads/' });
 const API_KEY = process.env.GEMINI_API_KEY;
 
-app.use(cors());
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// ⬇️ UPLOAD ROUTE: Extract text from PDF and return it
+// Upload Route: Extract text and return it to frontend
 app.post('/upload', upload.single('pdf'), async (req, res) => {
   try {
     const file = req.file;
+    if (!file) return res.status(400).json({ message: 'No file uploaded.' });
+
     const dataBuffer = fs.readFileSync(file.path);
     const pdfData = await pdfParse(dataBuffer);
 
-    // Clean up uploaded file
-    fs.unlinkSync(file.path);
+    fs.unlinkSync(file.path); // Delete file after reading
 
     res.json({
       numPages: pdfData.numpages || 1,
       parsedText: pdfData.text
     });
   } catch (err) {
-    console.error('Upload error:', err);
+    console.error('❌ Upload error:', err);
     res.status(500).json({ message: 'PDF upload failed.' });
   }
 });
 
-// ⬇️ CHAT ROUTE: Use question + context from frontend
+// Chat Route: Receives question and context, sends to Gemini
 app.post('/chat', async (req, res) => {
   const { question, context } = req.body;
 
@@ -57,7 +58,6 @@ app.post('/chat', async (req, res) => {
 
     const result = await geminiRes.json();
     const answer = result?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, no answer generated.';
-
     res.json({ answer, pages: [1] });
   } catch (error) {
     console.error('Gemini API Error:', error);
